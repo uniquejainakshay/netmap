@@ -2,14 +2,21 @@
 
 #set -x  # for debugging
 
-if [ -z "$NMSRC" ]; then
-    NMSRC=~/netmap-release
-fi
-DRIVER="ixgbe"
-#IF="eth0"  # force an interface
+NMSRC="/home/akshay/sources/netmap"                       # netmap source 
+DRIVER="e1000e"
 
-if [ ! -f ${NMSRC}/LINUX/netmap_lin.ko ]; then
-    echo "LINUX/netmap_lin.ko missing. Please compile netmap."
+if [ "$DRIVER"  == "" ]; then 
+	echo "Driver name not specified " 
+	exit 1 
+fi 
+
+if [ "$NMSRC" == "" ]; then 
+	echo "Please set the netmap source variable in the script " 
+	exit 1 
+fi
+
+if [ ! -f ${NMSRC}/LINUX/netmap.ko ]; then
+    echo "LINUX/netmap.ko missing. Please compile netmap."
     exit 1
 fi
 
@@ -19,8 +26,9 @@ if [ ! -f ${NMSRC}/LINUX/${DRIVER}/${DRIVER}.ko ]; then
     exit 1
 fi
 
-NMLOADED=$(lsmod | grep netmap_lin | wc -l)
+NMLOADED=$(lsmod | grep netmap| wc -l)
 DRVLOADED=$(lsmod | grep "${DRIVER}" | wc -l)
+PTPLOADED=$(lsmod | grep ptp | wc -l)
 
 # Unload the driver
 if [ $DRVLOADED != "0" ]; then
@@ -29,8 +37,13 @@ fi
 
 # Load netmap
 if [ $NMLOADED == "0" ]; then
-    sudo insmod ${NMSRC}/LINUX/netmap_lin.ko
+    sudo insmod ${NMSRC}/LINUX/netmap.ko 
 fi
+
+# load ptp 
+if [ $PTPLOADED == "0" ]; then 
+	sudo modprobe ptp	
+fi 
 
 if [ "$1" == "g" ]; then
     # In order to use generic netmap adapter, load the original driver module, that doesn't
@@ -61,8 +74,7 @@ done
 
 if [ "$IF" == "" ]; then
     echo "No interface using ${DRIVER} driver was found."
-    exit 1
-fi
-
-sudo ip link set ${IF} up
+    exit 1;
+fi;
+sudo ip link set ${IF} up;
 
